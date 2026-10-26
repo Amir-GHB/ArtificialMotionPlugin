@@ -25,7 +25,11 @@ bool FAIAnimationDocumentValidator::Validate(
     }
 
     TSet<FName> SeenBones;
-    const TSet<FName> AllowedBones(ValidBoneNames);
+    TSet<FName> AllowedBones;
+    for (const FName& BoneName : ValidBoneNames)
+    {
+        AllowedBones.Add(BoneName);
+    }
 
     for (const FAIAnimationBoneTrack& Track : Document.Tracks)
     {
