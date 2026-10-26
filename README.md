@@ -24,7 +24,7 @@ The core JSON pipeline defines a canonical document format, parses and validates
 
 ## Installation
 
-1. Copy the `ArtiMotion` plugin directory into your project's `Plugins` directory.
+1. Copy this repository's plugin folder into your project's `Plugins` directory and name the folder `ArtiMotion`.
 2. Regenerate project files if needed.
 3. Build with the same Unreal Engine version as your project (initial target: UE 5.8).
 4. Enable **ArtiMotion** in **Edit → Plugins**.
