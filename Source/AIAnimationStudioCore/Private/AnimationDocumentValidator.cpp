@@ -44,6 +44,12 @@ bool FAIAnimationDocumentValidator::Validate(
         }
         SeenBones.Add(Track.BoneName);
 
+        if (Track.Keys.IsEmpty())
+        {
+            OutErrors.Add(FString::Printf(TEXT("Track '%s' must contain at least one key."), *Track.BoneName.ToString()));
+            continue;
+        }
+
         if (ValidBoneNames.Num() > 0 && !AllowedBones.Contains(Track.BoneName))
         {
             OutErrors.Add(FString::Printf(TEXT("Bone '%s' is not present in the target skeleton."), *Track.BoneName.ToString()));
@@ -61,10 +67,10 @@ bool FAIAnimationDocumentValidator::Validate(
                     TEXT("Track '%s' key %d has a time outside the animation duration."),
                     *Track.BoneName.ToString(), KeyIndex));
             }
-            if (KeyIndex > 0 && Key.TimeSeconds < PreviousTime)
+            if (KeyIndex > 0 && Key.TimeSeconds <= PreviousTime)
             {
                 OutErrors.Add(FString::Printf(
-                    TEXT("Track '%s' keys must be ordered by time."),
+                    TEXT("Track '%s' keys must have strictly increasing times."),
                     *Track.BoneName.ToString()));
             }
             PreviousTime = Key.TimeSeconds;
