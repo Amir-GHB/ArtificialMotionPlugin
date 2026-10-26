@@ -1,36 +1,76 @@
 {
   "schemaVersion": "1.0",
-  "documentId": "example-sword-attack",
+  "documentId": "8b5c3c44-5a2e-4d1b-a08d-8d2d6a75a1b2",
   "revision": 0,
   "name": "ExampleSwordAttack",
-  "skeleton": {
-    "assetPath": "/Game/Characters/Mannequins/SK_Mannequin",
-    "profile": "UE5_Mannequin",
-    "referencePoseHash": ""
-  },
-  "timing": {
-    "durationSeconds": 0.8,
-    "sampleRate": 30,
-    "interpolation": "linear"
-  },
-  "rootMotion": {
-    "mode": "in_place",
-    "rootBone": "root"
-  },
+  "skeletonAssetPath": "/Game/Characters/Mannequins/SK_Mannequin.SK_Mannequin",
+  "skeletonSignature": "",
+  "durationSeconds": 0.8,
+  "sampleRate": 30,
+  "rootMotionMode": "in_place",
+  "rootBoneName": "root",
   "tracks": [
     {
-      "bone": "spine_01",
-      "space": "local",
+      "boneName": "spine_01",
       "keys": [
-        { "time": 0.0, "translation": [0, 0, 0], "rotation": [0, 0, 0, 1], "scale": [1, 1, 1] },
-        { "time": 0.4, "translation": [0, 0, 0], "rotation": [0, 0.1305, 0, 0.9914], "scale": [1, 1, 1] },
-        { "time": 0.8, "translation": [0, 0, 0], "rotation": [0, 0, 0, 1], "scale": [1, 1, 1] }
+        {
+          "timeSeconds": 0,
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        {
+          "timeSeconds": 0.4,
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0.1305,
+            0,
+            0.9914
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        {
+          "timeSeconds": 0.8,
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        }
       ]
     }
-  ],
-  "markers": [
-    { "name": "Preparation", "time": 0.0 },
-    { "name": "Strike", "time": 0.4 },
-    { "name": "Recovery", "time": 0.8 }
   ]
 }

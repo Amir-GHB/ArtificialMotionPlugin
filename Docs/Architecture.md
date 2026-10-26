@@ -1,45 +1,34 @@
-# Architecture and implementation notes
+# ArtiMotion architecture
 
-## First milestone
+## Current implementation
 
-The first implementation is intentionally a scaffold:
-- Unreal plugin descriptor and three modules.
-- Shared reflected animation document, track, and keyframe structs.
-- Stateless document validation.
-- Dockable editor tab proving that the editor module loads.
+- `AIAnimationStudioRuntime`: reflected animation document, track, and keyframe types.
+- `AIAnimationStudioCore`: document validation, JSON parse/serialize, and uniform pose sampling.
+- `AIAnimationStudioEditor`: editor tab and future preview, AI-provider, and native asset baking integrations.
 
-The tab is a placeholder. It does not yet preview a skeletal mesh, call Gemini, or bake an animation.
+The internal module identifiers retain their original names for now; the plugin's user-facing name and descriptor are ArtiMotion.
 
-## Module boundaries
+## Canonical JSON schema
 
-- AIAnimationStudioRuntime owns shared reflected data structures.
-- AIAnimationStudioCore owns document validation and later interpolation, patch application, skeleton mapping, and transform conversion.
-- AIAnimationStudioEditor owns Slate UI, preview scenes, AI provider adapters, editor settings, revision management, and native asset generation.
+The example at `Content/Examples/SwordAttack.json` is the canonical schema. Top-level fields include `schemaVersion`, `documentId`, `revision`, `name`, `skeletonAssetPath`, `skeletonSignature`, `durationSeconds`, `sampleRate`, `rootMotionMode`, `rootBoneName`, and `tracks`.
 
-## Canonical document conventions
+Each track has a `boneName` and `keys`. Each key has `timeSeconds`, `translation` (three numbers), `rotation` (quaternion `[x, y, z, w]`), and `scale` (three numbers).
 
-- Time is expressed in seconds.
-- Translation uses Unreal units (centimeters) after input conversion.
-- Rotations are quaternions. JSON uses [x, y, z, w]; conversion to and from FQuat must be explicit.
-- Tracks are local-space transforms relative to each bone's parent.
-- Tracks may be sparse. A preview/bake layer must resolve them against a defined starting pose and interpolate missing samples.
-- AI revisions should use patches tied to a base revision; stale patches must be rejected.
-- Never execute model-generated code. Accept validated structured data only.
+## Conventions and safeguards
 
-## Planned milestones
+- Time is in seconds; translations are in Unreal units (centimeters).
+- Transforms are local to the parent bone.
+- Sparse keys are interpolated against adjacent keys, with endpoints held constant.
+- Translation and scale use linear interpolation; rotation uses quaternion slerp.
+- Optional target bone names are checked during validation.
+- Root-motion metadata does not itself extract root motion. That remains an asset-baking concern.
+- Reject malformed or stale AI output; never execute generated code.
 
-1. Plugin/module scaffold.
-2. JSON read/write and validator tests.
-3. Mannequin selection, skeleton profile, and document-driven preview.
-4. Gemini provider and structured keyframe generation.
-5. Revision patches, undo/redo, and targeted edits.
-6. UAnimSequence baking through the animation data model/controller.
-7. Timeline, bone gizmos, revision comparison, and quality constraints.
+## Next milestones
 
-## Important implementation cautions
-
-- Verify bone names and the skeleton/reference-pose signature against the actual target asset. Do not assume one mannequin asset path or bone naming scheme is universal.
-- Keep previewing separate from asset baking; do not create a Content Browser asset for every intermediate AI response.
-- Validate finite values, key ordering, duration bounds, quaternion magnitude, and bone existence before applying AI output.
-- Root-motion extraction is an asset-generation concern and is not implemented by document metadata alone.
-- Animation data model/controller APIs are engine-version-sensitive. Confirm exact signatures in the target UE 5.8 headers before implementing the builder.
+1. Compile and test JSON import/export and the sampler in UE 5.8.
+2. Add automated tests for malformed JSON, validation, quaternion order, and interpolation.
+3. Add a preview component that applies sampled local transforms to a mannequin.
+4. Add revision patches and targeted edits.
+5. Bake a native `UAnimSequence` using the UE 5.8 animation data controller APIs.
+6. Add Gemini integration with a secure key-management strategy.

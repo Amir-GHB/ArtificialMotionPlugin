@@ -10,6 +10,7 @@ public class AIAnimationStudioCore : ModuleRules
             "Core",
             "CoreUObject",
             "Engine",
+            "Json",
             "AIAnimationStudioRuntime"
         });
     }

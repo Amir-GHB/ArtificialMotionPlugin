@@ -13,8 +13,8 @@ public:
         FGlobalTabmanager::Get()->RegisterNomadTabSpawner(
             TabName,
             FOnSpawnTab::CreateRaw(this, &FAIAnimationStudioEditorModule::SpawnStudioTab))
-            .SetDisplayName(LOCTEXT("TabTitle", "AI Animation Studio"))
-            .SetTooltipText(LOCTEXT("TabTooltip", "Open the AI-assisted animation authoring workspace."));
+            .SetDisplayName(LOCTEXT("TabTitle", "ArtiMotion"))
+            .SetTooltipText(LOCTEXT("TabTooltip", "Open the ArtiMotion animation authoring workspace."));
     }
 
     virtual void ShutdownModule() override
@@ -33,12 +33,12 @@ private:
                 SNew(STextBlock)
                 .Text(LOCTEXT(
                     "ScaffoldMessage",
-                    "AI Animation Studio\n\nPlugin scaffold loaded. Next: animation document preview."))
+                    "ArtiMotion\n\nCore pipeline: JSON parsing, validation, and sampled local-space pose data. Skeletal preview and UAnimSequence baking are next."))
             ];
     }
 };
 
-const FName FAIAnimationStudioEditorModule::TabName(TEXT("AIAnimationStudio"));
+const FName FAIAnimationStudioEditorModule::TabName(TEXT("ArtiMotion"));
 
 IMPLEMENT_MODULE(FAIAnimationStudioEditorModule, AIAnimationStudioEditor)
 
