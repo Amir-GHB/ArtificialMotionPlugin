@@ -1,0 +1,18 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "0.1.0",
+  "FriendlyName": "AI Animation Studio",
+  "Description": "AI-assisted skeletal animation authoring tools for Unreal Engine.",
+  "Category": "Animation",
+  "CreatedBy": "AI Animation Studio contributors",
+  "CanContainContent": true,
+  "IsBetaVersion": true,
+  "IsExperimentalVersion": true,
+  "Installed": false,
+  "Modules": [
+    { "Name": "AIAnimationStudioRuntime", "Type": "Runtime", "LoadingPhase": "Default" },
+    { "Name": "AIAnimationStudioCore", "Type": "Runtime", "LoadingPhase": "Default" },
+    { "Name": "AIAnimationStudioEditor", "Type": "Editor", "LoadingPhase": "Default" }
+  ]
+}
