@@ -39,4 +39,6 @@ private:
     float DurationSeconds = 0.0f;
     float PlaybackTimeSeconds = 0.0f;
     bool bPlaying = false;
+    float DiagnosticLogAccumulator = 0.0f;
+    float LastPoseDiagnosticTime = -1.0f;
 };
