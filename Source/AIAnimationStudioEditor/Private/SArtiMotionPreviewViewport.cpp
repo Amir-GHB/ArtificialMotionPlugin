@@ -123,11 +123,20 @@ void SArtiMotionPreviewViewport::ApplyCurrentFrame()
             FMath::Lerp(A.GetLocation(), B.GetLocation(), Alpha),
             FMath::Lerp(A.GetScale3D(), B.GetScale3D(), Alpha));
 
-        PreviewComponent->SetBoneTransformByName(
-            BoneTransform.Key,
-            BlendedTransform,
-            EBoneSpaces::LocalSpace);
+        const int32 BoneIndex = PreviewComponent->GetSkeletalMeshAsset()
+            ? PreviewComponent->GetSkeletalMeshAsset()->GetRefSkeleton().FindBoneIndex(BoneTransform.Key)
+            : INDEX_NONE;
+
+        // ArtiMotion stores local-to-parent transforms. In UE 5.8, EBoneSpaces
+        // only exposes world and component space, so write directly to the
+        // poseable component's local BoneSpaceTransforms array.
+        if (BoneIndex != INDEX_NONE && PreviewComponent->BoneSpaceTransforms.IsValidIndex(BoneIndex))
+        {
+            PreviewComponent->BoneSpaceTransforms[BoneIndex] = BlendedTransform;
+        }
     }
 
+    PreviewComponent->FillComponentSpaceTransforms();
+    PreviewComponent->MarkRefreshTransformDirty();
     PreviewComponent->MarkRenderDynamicDataDirty();
 }
