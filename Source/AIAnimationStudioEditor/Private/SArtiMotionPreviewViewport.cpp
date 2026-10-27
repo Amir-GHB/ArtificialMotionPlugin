@@ -120,6 +120,35 @@ void SArtiMotionPreviewViewport::Tick(
 
 void SArtiMotionPreviewViewport::ApplyCurrentFrame()
 {
+    // TEMPORARY DIAGNOSTIC: bypass imported samples and force a visible pose change.
+    // This uses component space because UPoseableMeshComponent's public setter does
+    // not expose parent-relative local space in UE 5.8.
+    if (PreviewComponent && GetPreviewMesh())
+    {
+        static bool bLoggedHardcodedPose = false;
+        PreviewComponent->SetBoneRotationByName(
+            FName(TEXT("upperarm_r")),
+            FRotator(0.0f, 0.0f, 90.0f),
+            EBoneSpaces::ComponentSpace);
+        PreviewComponent->MarkRefreshTransformDirty();
+        PreviewComponent->MarkRenderDynamicDataDirty();
+
+        if (!bLoggedHardcodedPose)
+        {
+            const FRotator AppliedRotation = PreviewComponent->GetBoneRotationByName(
+                FName(TEXT("upperarm_r")), EBoneSpaces::ComponentSpace);
+            UE_LOG(LogTemp, Warning,
+                TEXT("[ArtiMotion][HARDCODE TEST] Applied upperarm_r component-space rotation. Readback=(P=%.1f Y=%.1f R=%.1f). Animation samples are intentionally bypassed."),
+                AppliedRotation.Pitch, AppliedRotation.Yaw, AppliedRotation.Roll);
+            bLoggedHardcodedPose = true;
+        }
+        if (PreviewViewportClient.IsValid())
+        {
+            PreviewViewportClient->Invalidate();
+        }
+        return;
+    }
+
     if (!PreviewComponent || !GetPreviewMesh() || Samples.IsEmpty())
     {
         UE_LOG(LogTemp, Warning, TEXT("[ArtiMotion][Pose] ApplyCurrentFrame aborted: component=%s mesh=%s samples=%d"),
