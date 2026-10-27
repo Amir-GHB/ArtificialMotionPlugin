@@ -13,7 +13,8 @@ void SArtiMotionPreviewViewport::Construct(const FArguments& InArgs)
     PreviewComponent = NewObject<UPoseableMeshComponent>(GetTransientPackage(), NAME_None, RF_Transient);
     PreviewComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     PreviewComponent->SetGenerateOverlapEvents(false);
-    PreviewComponent->SetComponentTickEnabled(false);
+    // PoseableMeshComponent needs its tick enabled to process dirty bone transforms.
+    PreviewComponent->SetComponentTickEnabled(true);
     PreviewScene->AddComponent(PreviewComponent, FTransform::Identity);
     UE_LOG(LogTemp, Display, TEXT("[ArtiMotion][Viewport] Constructed poseable preview component."));
 }
