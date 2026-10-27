@@ -7,7 +7,7 @@
 class FAdvancedPreviewScene;
 class FEditorViewportClient;
 class USkeletalMesh;
-class USkeletalMeshComponent;
+class UPoseableMeshComponent;
 
 /** Minimal editor viewport for previewing sampled ArtiMotion local-space poses. */
 class SArtiMotionPreviewViewport : public SEditorViewport
@@ -34,7 +34,7 @@ private:
 
     TSharedPtr<FAdvancedPreviewScene> PreviewScene;
     TSharedPtr<FEditorViewportClient> PreviewViewportClient;
-    USkeletalMeshComponent* PreviewComponent = nullptr;
+    UPoseableMeshComponent* PreviewComponent = nullptr;
     TArray<FArtiMotionSampledFrame> Samples;
     float DurationSeconds = 0.0f;
     float PlaybackTimeSeconds = 0.0f;
