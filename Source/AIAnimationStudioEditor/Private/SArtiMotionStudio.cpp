@@ -160,6 +160,8 @@ FReply SArtiMotionStudio::OnLoadJsonClicked()
 
     Document = MoveTemp(ParsedDocument);
     bDocumentLoaded = true;
+    UE_LOG(LogTemp, Display, TEXT("[ArtiMotion][Import] Loaded document=%s duration=%.3f sampleRate=%d tracks=%d"),
+        *Document.Name, Document.DurationSeconds, Document.SampleRate, Document.Tracks.Num());
     bPlaying = false;
     PreviewMeshPath = Document.SkeletonAssetPath.ToString();
     if (MeshPathTextBox.IsValid())
@@ -257,11 +259,16 @@ void SArtiMotionStudio::RefreshSamples()
 
     TArray<FString> Errors;
     const TArray<FName> BoneNames = GetPreviewBoneNames();
+    UE_LOG(LogTemp, Display, TEXT("[ArtiMotion][Sampling] Starting: documentTracks=%d knownMeshBones=%d mesh=%s"),
+        Document.Tracks.Num(), BoneNames.Num(),
+        PreviewViewport.IsValid() && PreviewViewport->GetPreviewMesh() ? *PreviewViewport->GetPreviewMesh()->GetName() : TEXT("<no mesh>"));
     if (!FArtiMotionDocumentSampler::BuildSamples(Document, Samples, Errors, BoneNames))
     {
         StatusMessage = TEXT("Animation validation failed:\n") + FString::Join(Errors, TEXT("\n"));
+        UE_LOG(LogTemp, Error, TEXT("[ArtiMotion][Sampling] BuildSamples FAILED: %s"), *StatusMessage);
         return;
     }
+    UE_LOG(LogTemp, Display, TEXT("[ArtiMotion][Sampling] BuildSamples succeeded: frames=%d duration=%.3f"), Samples.Num(), Document.DurationSeconds);
 
     if (PreviewViewport.IsValid())
     {
@@ -284,6 +291,10 @@ FReply SArtiMotionStudio::OnPlayPauseClicked()
     }
 
     bPlaying = !bPlaying;
+    UE_LOG(LogTemp, Display, TEXT("[ArtiMotion][UI] Play/Pause clicked: documentLoaded=%s samples=%d mesh=%s newPlaying=%s"),
+        bDocumentLoaded ? TEXT("true") : TEXT("false"), Samples.Num(),
+        PreviewViewport->GetPreviewMesh() ? *PreviewViewport->GetPreviewMesh()->GetName() : TEXT("<no mesh>"),
+        bPlaying ? TEXT("true") : TEXT("false"));
     PreviewViewport->SetPlaying(bPlaying);
     return FReply::Handled();
 }
