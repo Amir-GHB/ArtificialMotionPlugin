@@ -99,24 +99,34 @@ void SArtiMotionPreviewViewport::ApplyCurrentFrame()
         return;
     }
 
-    int32 BestFrameIndex = 0;
-    float BestDistance = TNumericLimits<float>::Max();
-    for (int32 Index = 0; Index < Samples.Num(); ++Index)
+    int32 LeftIndex = 0;
+    while (LeftIndex + 1 < Samples.Num() && Samples[LeftIndex + 1].TimeSeconds < PlaybackTimeSeconds)
     {
-        const float Distance = FMath::Abs(Samples[Index].TimeSeconds - PlaybackTimeSeconds);
-        if (Distance < BestDistance)
-        {
-            BestDistance = Distance;
-            BestFrameIndex = Index;
-        }
+        ++LeftIndex;
     }
 
-    const FArtiMotionSampledFrame& Frame = Samples[BestFrameIndex];
-    for (const TPair<FName, FTransform>& BoneTransform : Frame.BoneTransforms)
+    const int32 RightIndex = FMath::Min(LeftIndex + 1, Samples.Num() - 1);
+    const FArtiMotionSampledFrame& LeftFrame = Samples[LeftIndex];
+    const FArtiMotionSampledFrame& RightFrame = Samples[RightIndex];
+    const float Span = RightFrame.TimeSeconds - LeftFrame.TimeSeconds;
+    const float Alpha = Span > UE_SMALL_NUMBER
+        ? FMath::Clamp((PlaybackTimeSeconds - LeftFrame.TimeSeconds) / Span, 0.0f, 1.0f)
+        : 0.0f;
+
+    for (const TPair<FName, FTransform>& BoneTransform : LeftFrame.BoneTransforms)
     {
+        const FTransform* RightTransform = RightFrame.BoneTransforms.Find(BoneTransform.Key);
+        const FTransform& A = BoneTransform.Value;
+        const FTransform& B = RightTransform ? *RightTransform : A;
+
+        const FTransform BlendedTransform(
+            FQuat::Slerp(A.GetRotation(), B.GetRotation(), Alpha).GetNormalized(),
+            FMath::Lerp(A.GetLocation(), B.GetLocation(), Alpha),
+            FMath::Lerp(A.GetScale3D(), B.GetScale3D(), Alpha));
+
         PreviewComponent->SetBoneTransformByName(
             BoneTransform.Key,
-            BoneTransform.Value,
+            BlendedTransform,
             EBoneSpaces::ParentBoneSpace);
     }
 
