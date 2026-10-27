@@ -1,7 +1,7 @@
 #include "SArtiMotionPreviewViewport.h"
 
 #include "AdvancedPreviewScene.h"
-#include "Components/SkeletalMeshComponent.h"
+#include "Components/PoseableMeshComponent.h"
 #include "EditorViewportClient.h"
 #include "Engine/SkeletalMesh.h"
 
@@ -10,7 +10,7 @@ void SArtiMotionPreviewViewport::Construct(const FArguments& InArgs)
     PreviewScene = MakeShared<FAdvancedPreviewScene>(FPreviewScene::ConstructionValues());
     SEditorViewport::Construct(SEditorViewport::FArguments());
 
-    PreviewComponent = NewObject<USkeletalMeshComponent>(GetTransientPackage(), NAME_None, RF_Transient);
+    PreviewComponent = NewObject<UPoseableMeshComponent>(GetTransientPackage(), NAME_None, RF_Transient);
     PreviewComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     PreviewComponent->SetGenerateOverlapEvents(false);
     PreviewComponent->SetComponentTickEnabled(false);
@@ -23,7 +23,6 @@ TSharedRef<FEditorViewportClient> SArtiMotionPreviewViewport::MakeEditorViewport
     PreviewViewportClient = MakeShared<FEditorViewportClient>(nullptr, PreviewScene.Get(), SharedThis(this));
     PreviewViewportClient->SetViewLocation(FVector(260.0f, 260.0f, 110.0f));
     PreviewViewportClient->SetViewRotation(FRotator(-12.0f, -135.0f, 0.0f));
-    PreviewViewportClient->SetViewFOV(50.0f);
     PreviewViewportClient->SetRealtime(true);
     return PreviewViewportClient.ToSharedRef();
 }
@@ -49,7 +48,7 @@ void SArtiMotionPreviewViewport::SetPreviewMesh(USkeletalMesh* InMesh)
 
 USkeletalMesh* SArtiMotionPreviewViewport::GetPreviewMesh() const
 {
-    return PreviewComponent ? PreviewComponent->GetSkeletalMesh() : nullptr;
+    return PreviewComponent ? PreviewComponent->GetSkeletalMeshAsset() : nullptr;
 }
 
 void SArtiMotionPreviewViewport::SetSamples(
@@ -94,7 +93,7 @@ void SArtiMotionPreviewViewport::Tick(
 
 void SArtiMotionPreviewViewport::ApplyCurrentFrame()
 {
-    if (!PreviewComponent || !PreviewComponent->GetSkeletalMesh() || Samples.IsEmpty())
+    if (!PreviewComponent || !PreviewComponent->GetSkeletalMeshAsset() || Samples.IsEmpty())
     {
         return;
     }
@@ -127,9 +126,8 @@ void SArtiMotionPreviewViewport::ApplyCurrentFrame()
         PreviewComponent->SetBoneTransformByName(
             BoneTransform.Key,
             BlendedTransform,
-            EBoneSpaces::ParentBoneSpace);
+            EBoneSpaces::LocalSpace);
     }
 
-    PreviewComponent->RefreshBoneTransforms();
     PreviewComponent->MarkRenderDynamicDataDirty();
 }
