@@ -14,8 +14,8 @@ void SArtiMotionPreviewViewport::Construct(const FArguments& InArgs)
     PreviewComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     PreviewComponent->SetGenerateOverlapEvents(false);
     PreviewComponent->SetComponentTickEnabled(false);
-    PreviewComponent->SetAnimationMode(EAnimationMode::AnimationSingleNode);
     PreviewScene->AddComponent(PreviewComponent, FTransform::Identity);
+    UE_LOG(LogTemp, Display, TEXT("[ArtiMotion][Viewport] Constructed poseable preview component."));
 }
 
 TSharedRef<FEditorViewportClient> SArtiMotionPreviewViewport::MakeEditorViewportClient()
@@ -34,7 +34,10 @@ void SArtiMotionPreviewViewport::SetPreviewMesh(USkeletalMesh* InMesh)
         return;
     }
 
-    PreviewComponent->SetSkeletalMesh(InMesh);
+    PreviewComponent->SetSkinnedAssetAndUpdate(InMesh, true);
+    UE_LOG(LogTemp, Display, TEXT("[ArtiMotion][Viewport] SetPreviewMesh: mesh=%s bones=%d"),
+        InMesh ? *InMesh->GetName() : TEXT("<null>"),
+        InMesh ? InMesh->GetRefSkeleton().GetNum() : 0);
     Samples.Reset();
     PlaybackTimeSeconds = 0.0f;
     bPlaying = false;
@@ -48,7 +51,7 @@ void SArtiMotionPreviewViewport::SetPreviewMesh(USkeletalMesh* InMesh)
 
 USkeletalMesh* SArtiMotionPreviewViewport::GetPreviewMesh() const
 {
-    return PreviewComponent ? PreviewComponent->GetSkeletalMeshAsset() : nullptr;
+    return PreviewComponent ? Cast<USkeletalMesh>(PreviewComponent->GetSkinnedAsset()) : nullptr;
 }
 
 void SArtiMotionPreviewViewport::SetSamples(
@@ -58,12 +61,28 @@ void SArtiMotionPreviewViewport::SetSamples(
     Samples = InSamples;
     DurationSeconds = FMath::Max(0.0f, InDurationSeconds);
     PlaybackTimeSeconds = 0.0f;
+    UE_LOG(LogTemp, Display, TEXT("[ArtiMotion][Samples] SetSamples: frames=%d duration=%.3f mesh=%s"),
+        Samples.Num(), DurationSeconds, GetPreviewMesh() ? *GetPreviewMesh()->GetName() : TEXT("<no mesh>"));
+    if (Samples.Num() > 0)
+    {
+        UE_LOG(LogTemp, Display, TEXT("[ArtiMotion][Samples] First frame: time=%.3f boneTransforms=%d"),
+            Samples[0].TimeSeconds, Samples[0].BoneTransforms.Num());
+        for (const TPair<FName, FTransform>& Pair : Samples[0].BoneTransforms)
+        {
+            UE_LOG(LogTemp, Verbose, TEXT("[ArtiMotion][Samples] First-frame bone=%s rot=(%.3f, %.3f, %.3f, %.3f)"),
+                *Pair.Key.ToString(), Pair.Value.GetRotation().X, Pair.Value.GetRotation().Y,
+                Pair.Value.GetRotation().Z, Pair.Value.GetRotation().W);
+        }
+    }
     ApplyCurrentFrame();
 }
 
 void SArtiMotionPreviewViewport::SetPlaying(bool bInPlaying)
 {
     bPlaying = bInPlaying && Samples.Num() > 1 && DurationSeconds > 0.0f;
+    UE_LOG(LogTemp, Display, TEXT("[ArtiMotion][Playback] SetPlaying requested=%s actual=%s frames=%d duration=%.3f mesh=%s"),
+        bInPlaying ? TEXT("true") : TEXT("false"), bPlaying ? TEXT("true") : TEXT("false"),
+        Samples.Num(), DurationSeconds, GetPreviewMesh() ? *GetPreviewMesh()->GetName() : TEXT("<no mesh>"));
 }
 
 void SArtiMotionPreviewViewport::SetPlaybackTime(float InTimeSeconds)
@@ -87,14 +106,23 @@ void SArtiMotionPreviewViewport::Tick(
     if (bPlaying && DurationSeconds > UE_SMALL_NUMBER)
     {
         PlaybackTimeSeconds = FMath::Fmod(PlaybackTimeSeconds + InDeltaTime, DurationSeconds);
+        DiagnosticLogAccumulator += InDeltaTime;
+        if (DiagnosticLogAccumulator >= 1.0f)
+        {
+            DiagnosticLogAccumulator = 0.0f;
+            UE_LOG(LogTemp, Display, TEXT("[ArtiMotion][Playback] Tick advancing: time=%.3f delta=%.4f frames=%d"),
+                PlaybackTimeSeconds, InDeltaTime, Samples.Num());
+        }
         ApplyCurrentFrame();
     }
 }
 
 void SArtiMotionPreviewViewport::ApplyCurrentFrame()
 {
-    if (!PreviewComponent || !PreviewComponent->GetSkeletalMeshAsset() || Samples.IsEmpty())
+    if (!PreviewComponent || !GetPreviewMesh() || Samples.IsEmpty())
     {
+        UE_LOG(LogTemp, Warning, TEXT("[ArtiMotion][Pose] ApplyCurrentFrame aborted: component=%s mesh=%s samples=%d"),
+            PreviewComponent ? TEXT("valid") : TEXT("null"), GetPreviewMesh() ? TEXT("valid") : TEXT("null"), Samples.Num());
         return;
     }
 
@@ -123,14 +151,23 @@ void SArtiMotionPreviewViewport::ApplyCurrentFrame()
             FMath::Lerp(A.GetLocation(), B.GetLocation(), Alpha),
             FMath::Lerp(A.GetScale3D(), B.GetScale3D(), Alpha));
 
-        const int32 BoneIndex = PreviewComponent->GetSkeletalMeshAsset()
-            ? PreviewComponent->GetSkeletalMeshAsset()->GetRefSkeleton().FindBoneIndex(BoneTransform.Key)
-            : INDEX_NONE;
+        const int32 BoneIndex = GetPreviewMesh()->GetRefSkeleton().FindBoneIndex(BoneTransform.Key);
 
         // ArtiMotion stores local-to-parent transforms. In UE 5.8, EBoneSpaces
         // only exposes world and component space, so write directly to the
         // poseable component's local BoneSpaceTransforms array.
-        if (BoneIndex != INDEX_NONE && PreviewComponent->BoneSpaceTransforms.IsValidIndex(BoneIndex))
+        const bool bValidBoneTransformIndex = BoneIndex != INDEX_NONE && PreviewComponent->BoneSpaceTransforms.IsValidIndex(BoneIndex);
+        const bool bLogThisPose = PlaybackTimeSeconds <= UE_SMALL_NUMBER ||
+            FMath::FloorToInt(PlaybackTimeSeconds) != FMath::FloorToInt(LastPoseDiagnosticTime);
+        if (bLogThisPose)
+        {
+            UE_LOG(LogTemp, Display, TEXT("[ArtiMotion][Pose] t=%.3f bone=%s index=%d transformSlotValid=%s requestedRot=(%.3f, %.3f, %.3f, %.3f)"),
+                PlaybackTimeSeconds, *BoneTransform.Key.ToString(), BoneIndex,
+                bValidBoneTransformIndex ? TEXT("true") : TEXT("false"),
+                BlendedTransform.GetRotation().X, BlendedTransform.GetRotation().Y,
+                BlendedTransform.GetRotation().Z, BlendedTransform.GetRotation().W);
+        }
+        if (bValidBoneTransformIndex)
         {
             PreviewComponent->BoneSpaceTransforms[BoneIndex] = BlendedTransform;
         }
@@ -139,4 +176,5 @@ void SArtiMotionPreviewViewport::ApplyCurrentFrame()
     PreviewComponent->FillComponentSpaceTransforms();
     PreviewComponent->MarkRefreshTransformDirty();
     PreviewComponent->MarkRenderDynamicDataDirty();
+    LastPoseDiagnosticTime = PlaybackTimeSeconds;
 }
