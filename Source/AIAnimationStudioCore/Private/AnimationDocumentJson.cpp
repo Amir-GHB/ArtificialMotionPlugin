@@ -111,27 +111,27 @@ bool FArtiMotionDocumentJson::ParseAndValidate(
     FAIAnimationDocument Parsed;
     FString S;
     double N = 0.0;
-    ReadString(Root, TEXT("schemaVersion"), Parsed.SchemaVersion, OutErrors);
-    ReadString(Root, TEXT("name"), Parsed.Name, OutErrors);
-    if (ReadNumber(Root, TEXT("revision"), N, OutErrors)) Parsed.Revision = static_cast<int32>(N);
-    if (ReadNumber(Root, TEXT("durationSeconds"), N, OutErrors)) Parsed.DurationSeconds = static_cast<float>(N);
-    if (ReadNumber(Root, TEXT("sampleRate"), N, OutErrors)) Parsed.SampleRate = static_cast<int32>(N);
+    ArtiMotionJson::ReadString(Root, TEXT("schemaVersion"), Parsed.SchemaVersion, OutErrors);
+    ArtiMotionJson::ReadString(Root, TEXT("name"), Parsed.Name, OutErrors);
+    if (ArtiMotionJson::ReadNumber(Root, TEXT("revision"), N, OutErrors)) Parsed.Revision = static_cast<int32>(N);
+    if (ArtiMotionJson::ReadNumber(Root, TEXT("durationSeconds"), N, OutErrors)) Parsed.DurationSeconds = static_cast<float>(N);
+    if (ArtiMotionJson::ReadNumber(Root, TEXT("sampleRate"), N, OutErrors)) Parsed.SampleRate = static_cast<int32>(N);
 
-    if (ReadString(Root, TEXT("documentId"), S, OutErrors, false))
+    if (ArtiMotionJson::ReadString(Root, TEXT("documentId"), S, OutErrors, false))
     {
         FGuid Guid;
         Parsed.DocumentId = FGuid::Parse(S, Guid) ? Guid : FGuid::NewGuid();
     }
-    if (ReadString(Root, TEXT("skeletonAssetPath"), S, OutErrors, false) && !S.IsEmpty())
+    if (ArtiMotionJson::ReadString(Root, TEXT("skeletonAssetPath"), S, OutErrors, false) && !S.IsEmpty())
         Parsed.SkeletonAssetPath = FSoftObjectPath(S);
-    ReadString(Root, TEXT("skeletonSignature"), Parsed.SkeletonSignature, OutErrors, false);
+    ArtiMotionJson::ReadString(Root, TEXT("skeletonSignature"), Parsed.SkeletonSignature, OutErrors, false);
 
-    if (ReadString(Root, TEXT("rootMotionMode"), S, OutErrors))
+    if (ArtiMotionJson::ReadString(Root, TEXT("rootMotionMode"), S, OutErrors))
     {
-        if (!ParseRootMotion(S, Parsed.RootMotionMode))
+        if (!ArtiMotionJson::ParseRootMotion(S, Parsed.RootMotionMode))
             OutErrors.Add(FString::Printf(TEXT("Unknown rootMotionMode '%s'."), *S));
     }
-    if (ReadString(Root, TEXT("rootBoneName"), S, OutErrors, false) && !S.IsEmpty())
+    if (ArtiMotionJson::ReadString(Root, TEXT("rootBoneName"), S, OutErrors, false) && !S.IsEmpty())
         Parsed.RootBoneName = FName(*S);
 
     const TArray<TSharedPtr<FJsonValue>>* Tracks = nullptr;
@@ -151,7 +151,7 @@ bool FArtiMotionDocumentJson::ParseAndValidate(
             }
             FAIAnimationBoneTrack Track;
             FString Bone;
-            if (!ReadString(TrackObject, TEXT("boneName"), Bone, OutErrors)) continue;
+            if (!ArtiMotionJson::ReadString(TrackObject, TEXT("boneName"), Bone, OutErrors)) continue;
             Track.BoneName = FName(*Bone);
 
             const TArray<TSharedPtr<FJsonValue>>* Keys = nullptr;
@@ -169,10 +169,10 @@ bool FArtiMotionDocumentJson::ParseAndValidate(
                     continue;
                 }
                 FAIAnimationKeyframe Key;
-                if (ReadNumber(KeyObject, TEXT("timeSeconds"), N, OutErrors)) Key.TimeSeconds = static_cast<float>(N);
-                ReadVector(KeyObject, TEXT("translation"), Key.Translation, OutErrors);
-                ReadQuat(KeyObject, TEXT("rotation"), Key.Rotation, OutErrors);
-                ReadVector(KeyObject, TEXT("scale"), Key.Scale, OutErrors);
+                if (ArtiMotionJson::ReadNumber(KeyObject, TEXT("timeSeconds"), N, OutErrors)) Key.TimeSeconds = static_cast<float>(N);
+                ArtiMotionJson::ReadVector(KeyObject, TEXT("translation"), Key.Translation, OutErrors);
+                ArtiMotionJson::ReadQuat(KeyObject, TEXT("rotation"), Key.Rotation, OutErrors);
+                ArtiMotionJson::ReadVector(KeyObject, TEXT("scale"), Key.Scale, OutErrors);
                 Track.Keys.Add(Key);
             }
             Parsed.Tracks.Add(MoveTemp(Track));
@@ -202,7 +202,7 @@ bool FArtiMotionDocumentJson::ToJson(
     Root->SetStringField(TEXT("skeletonSignature"), Document.SkeletonSignature);
     Root->SetNumberField(TEXT("durationSeconds"), Document.DurationSeconds);
     Root->SetNumberField(TEXT("sampleRate"), Document.SampleRate);
-    Root->SetStringField(TEXT("rootMotionMode"), RootMotionString(Document.RootMotionMode));
+    Root->SetStringField(TEXT("rootMotionMode"), ArtiMotionJson::RootMotionString(Document.RootMotionMode));
     Root->SetStringField(TEXT("rootBoneName"), Document.RootBoneName.ToString());
 
     TArray<TSharedPtr<FJsonValue>> TrackValues;
@@ -215,9 +215,9 @@ bool FArtiMotionDocumentJson::ToJson(
         {
             TSharedRef<FJsonObject> KeyObject = MakeShared<FJsonObject>();
             KeyObject->SetNumberField(TEXT("timeSeconds"), Key.TimeSeconds);
-            KeyObject->SetArrayField(TEXT("translation"), VectorArray(Key.Translation));
-            KeyObject->SetArrayField(TEXT("rotation"), QuatArray(Key.Rotation));
-            KeyObject->SetArrayField(TEXT("scale"), VectorArray(Key.Scale));
+            KeyObject->SetArrayField(TEXT("translation"), ArtiMotionJson::VectorArray(Key.Translation));
+            KeyObject->SetArrayField(TEXT("rotation"), ArtiMotionJson::QuatArray(Key.Rotation));
+            KeyObject->SetArrayField(TEXT("scale"), ArtiMotionJson::VectorArray(Key.Scale));
             KeyValues.Add(MakeShared<FJsonValueObject>(KeyObject));
         }
         TrackObject->SetArrayField(TEXT("keys"), KeyValues);
