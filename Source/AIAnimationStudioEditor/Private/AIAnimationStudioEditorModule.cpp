@@ -1,7 +1,7 @@
 #include "Modules/ModuleManager.h"
 #include "Framework/Docking/TabManager.h"
 #include "Widgets/Docking/SDockTab.h"
-#include "Widgets/Text/STextBlock.h"
+#include "SArtiMotionStudio.h"
 
 #define LOCTEXT_NAMESPACE "FAIAnimationStudioEditorModule"
 
@@ -30,10 +30,7 @@ private:
         return SNew(SDockTab)
             .TabRole(ETabRole::NomadTab)
             [
-                SNew(STextBlock)
-                .Text(LOCTEXT(
-                    "ScaffoldMessage",
-                    "ArtiMotion\n\nCore pipeline: JSON parsing, validation, and sampled local-space pose data. Skeletal preview and UAnimSequence baking are next."))
+                SNew(SArtiMotionStudio)
             ];
     }
 };

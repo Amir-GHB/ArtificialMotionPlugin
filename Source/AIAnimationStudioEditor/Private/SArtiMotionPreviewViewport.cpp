@@ -1,0 +1,125 @@
+#include "SArtiMotionPreviewViewport.h"
+
+#include "AdvancedPreviewScene.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "EditorViewportClient.h"
+#include "Engine/SkeletalMesh.h"
+
+void SArtiMotionPreviewViewport::Construct(const FArguments& InArgs)
+{
+    PreviewScene = MakeShared<FAdvancedPreviewScene>(FPreviewScene::ConstructionValues());
+    SEditorViewport::Construct(SEditorViewport::FArguments());
+
+    PreviewComponent = NewObject<USkeletalMeshComponent>(GetTransientPackage(), NAME_None, RF_Transient);
+    PreviewComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    PreviewComponent->SetGenerateOverlapEvents(false);
+    PreviewComponent->SetComponentTickEnabled(false);
+    PreviewComponent->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+    PreviewScene->AddComponent(PreviewComponent, FTransform::Identity);
+}
+
+TSharedRef<FEditorViewportClient> SArtiMotionPreviewViewport::MakeEditorViewportClient()
+{
+    PreviewViewportClient = MakeShared<FEditorViewportClient>(nullptr, PreviewScene.Get(), SharedThis(this));
+    PreviewViewportClient->SetViewLocation(FVector(260.0f, 260.0f, 110.0f));
+    PreviewViewportClient->SetViewRotation(FRotator(-12.0f, -135.0f, 0.0f));
+    PreviewViewportClient->SetViewFOV(50.0f);
+    PreviewViewportClient->SetRealtime(true);
+    return PreviewViewportClient.ToSharedRef();
+}
+
+void SArtiMotionPreviewViewport::SetPreviewMesh(USkeletalMesh* InMesh)
+{
+    if (!PreviewComponent)
+    {
+        return;
+    }
+
+    PreviewComponent->SetSkeletalMesh(InMesh);
+    Samples.Reset();
+    PlaybackTimeSeconds = 0.0f;
+    bPlaying = false;
+    ApplyCurrentFrame();
+
+    if (PreviewViewportClient.IsValid())
+    {
+        PreviewViewportClient->Invalidate();
+    }
+}
+
+USkeletalMesh* SArtiMotionPreviewViewport::GetPreviewMesh() const
+{
+    return PreviewComponent ? PreviewComponent->GetSkeletalMesh() : nullptr;
+}
+
+void SArtiMotionPreviewViewport::SetSamples(
+    const TArray<FArtiMotionSampledFrame>& InSamples,
+    float InDurationSeconds)
+{
+    Samples = InSamples;
+    DurationSeconds = FMath::Max(0.0f, InDurationSeconds);
+    PlaybackTimeSeconds = 0.0f;
+    ApplyCurrentFrame();
+}
+
+void SArtiMotionPreviewViewport::SetPlaying(bool bInPlaying)
+{
+    bPlaying = bInPlaying && Samples.Num() > 1 && DurationSeconds > 0.0f;
+}
+
+void SArtiMotionPreviewViewport::SetPlaybackTime(float InTimeSeconds)
+{
+    PlaybackTimeSeconds = FMath::Clamp(InTimeSeconds, 0.0f, DurationSeconds);
+    ApplyCurrentFrame();
+}
+
+bool SArtiMotionPreviewViewport::HasPreviewMesh() const
+{
+    return GetPreviewMesh() != nullptr;
+}
+
+void SArtiMotionPreviewViewport::Tick(
+    const FGeometry& AllottedGeometry,
+    double InCurrentTime,
+    float InDeltaTime)
+{
+    SEditorViewport::Tick(AllottedGeometry, InCurrentTime, InDeltaTime);
+
+    if (bPlaying && DurationSeconds > UE_SMALL_NUMBER)
+    {
+        PlaybackTimeSeconds = FMath::Fmod(PlaybackTimeSeconds + InDeltaTime, DurationSeconds);
+        ApplyCurrentFrame();
+    }
+}
+
+void SArtiMotionPreviewViewport::ApplyCurrentFrame()
+{
+    if (!PreviewComponent || !PreviewComponent->GetSkeletalMesh() || Samples.IsEmpty())
+    {
+        return;
+    }
+
+    int32 BestFrameIndex = 0;
+    float BestDistance = TNumericLimits<float>::Max();
+    for (int32 Index = 0; Index < Samples.Num(); ++Index)
+    {
+        const float Distance = FMath::Abs(Samples[Index].TimeSeconds - PlaybackTimeSeconds);
+        if (Distance < BestDistance)
+        {
+            BestDistance = Distance;
+            BestFrameIndex = Index;
+        }
+    }
+
+    const FArtiMotionSampledFrame& Frame = Samples[BestFrameIndex];
+    for (const TPair<FName, FTransform>& BoneTransform : Frame.BoneTransforms)
+    {
+        PreviewComponent->SetBoneTransformByName(
+            BoneTransform.Key,
+            BoneTransform.Value,
+            EBoneSpaces::ParentBoneSpace);
+    }
+
+    PreviewComponent->RefreshBoneTransforms();
+    PreviewComponent->MarkRenderDynamicDataDirty();
+}

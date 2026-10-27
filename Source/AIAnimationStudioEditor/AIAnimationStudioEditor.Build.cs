@@ -12,7 +12,10 @@ public class AIAnimationStudioEditor : ModuleRules
             "Engine",
             "Slate",
             "SlateCore",
+            "InputCore",
             "UnrealEd",
+            "DesktopPlatform",
+            "AdvancedPreviewScene",
             "AIAnimationStudioRuntime",
             "AIAnimationStudioCore"
         });
